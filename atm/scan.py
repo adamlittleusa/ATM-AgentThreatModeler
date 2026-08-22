@@ -44,6 +44,62 @@ def _merge_ev(dst: dict[str, list[dict]], src: dict[str, list[Evidence]], cap: i
                 bucket.append(ev.to_dict())
 
 
+def _detect_shape(root: Path, tools: list[dict], manifests: list[str]) -> tuple[str, list[str]]:
+    """Application, library, or unknown.
+
+    This matters because most checks assume a deployed system. A library is designed to
+    be the infrastructure that sits outside the tool boundary, holds no credentials of
+    its own, and has no deployment to govern. Reporting those as gaps is a category
+    error, so the shape is detected, stated, and carried into the report.
+    """
+    why: list[str] = []
+    lib, app = 0, 0
+
+    for m in manifests:
+        try:
+            text = (root / m).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if "[build-system]" in text:
+            lib += 2
+            why.append(f"`{m}` declares a build system, so this is packaged for distribution")
+        if "[project.scripts]" in text or "console_scripts" in text:
+            app += 1
+            why.append(f"`{m}` declares a console entry point")
+
+    if (root / "src").is_dir() and any((root / "src").glob("*/__init__.py")):
+        lib += 2
+        why.append("`src/` layout with an importable package")
+
+    # An application usually has a runnable entry point that is not a CLI shim.
+    for name in ("main.py", "app.py", "server.py", "worker.py", "run.py", "bot.py"):
+        if (root / name).is_file():
+            app += 2
+            why.append(f"`{name}` at the repository root")
+            break
+
+    if tools:
+        sample_like = sum(
+            1 for t in tools
+            if any(seg in t["file"] for seg in ("test", "example", "fixture", "demo", "sample"))
+        )
+        if sample_like / len(tools) > 0.6:
+            lib += 1
+            why.append(
+                f"{sample_like} of {len(tools)} tool declarations sit in test or example paths, "
+                "which is the shape of a library demonstrating itself"
+            )
+        elif sample_like == 0:
+            app += 1
+            why.append("tool declarations sit in production paths")
+
+    if lib >= app + 2:
+        return "library", why
+    if app >= lib + 2:
+        return "application", why
+    return "unknown", why
+
+
 def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = None) -> dict:
     root = root.resolve()
     if not root.is_dir():
@@ -203,10 +259,27 @@ def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = N
                 "paths. Re-run with --exclude to separate production surface from sample code."
             )
 
+    shape, shape_why = _detect_shape(root, tools, manifests_seen)
+    if shape == "library":
+        notes.insert(0,
+            "This target looks like a LIBRARY or framework rather than a deployed agent. Checks "
+            "that assume a running system — credentials, mediation, admission, egress policy — are "
+            "reported as unresolved rather than as gaps, because a library legitimately has none "
+            "of those. Point ATM at an application that consumes this library to get a real answer."
+        )
+    elif shape == "unknown":
+        notes.insert(0,
+            "Whether this target is a deployed application or a library could not be determined. "
+            "That distinction changes which checks are meaningful; settle it before acting on "
+            "anything below."
+        )
+
     return {
         "atm_version": ATM_VERSION,
         "target": {
             "root": root.name,
+            "shape": shape,
+            "shape_evidence": shape_why,
             "excluded_patterns": exclude,
             "excluded_files": excluded_files,
             "files_seen": total_files,

@@ -195,6 +195,18 @@ def render_html(fa: dict, inventory: dict | None = None) -> str:
     add(f'<p class="standfirst"><strong>These are candidates, not conclusions.</strong> '
         f'{_e(fa["next_step"])}</p>')
 
+    tshape = fa.get("target_shape", "unknown")
+    if tshape == "library":
+        add('<p class="standfirst"><strong>This target reads as a library, not a deployed '
+            'agent.</strong> Checks that assume a running system have been rerouted into questions '
+            'for whoever embeds it — a library legitimately holds no credentials, mediates nothing, '
+            'and has no deployment to govern. Point ATM at a consuming application for a real '
+            'answer.</p>')
+    elif tshape == "unknown":
+        add('<p class="standfirst"><strong>Whether this is a deployed application or a library '
+            'could not be determined.</strong> That distinction changes which findings below are '
+            'meaningful. Settle it first.</p>')
+
     if inventory:
         fw = ", ".join(inventory.get("frameworks", {})) or "no framework fingerprinted"
         ts = inventory.get("tool_summary", {})

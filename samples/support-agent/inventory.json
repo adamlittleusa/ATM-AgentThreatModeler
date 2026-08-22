@@ -2,6 +2,11 @@
   "atm_version": "0.1.0",
   "target": {
     "root": "support-agent",
+    "shape": "application",
+    "shape_evidence": [
+      "`worker.py` at the repository root",
+      "tool declarations sit in production paths"
+    ],
     "excluded_patterns": [],
     "excluded_files": 0,
     "files_seen": 6,

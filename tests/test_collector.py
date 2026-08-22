@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from atm.scan import scan  # noqa: E402
 from atm.render import render_markdown  # noqa: E402
-from atm.analyze import analyze  # noqa: E402
+from atm.analyze import DEPLOYMENT_ASSUMING, analyze  # noqa: E402
 from atm.checks import REGISTRY, catalogue  # noqa: E402
 from atm.report import render_findings  # noqa: E402
 
@@ -76,8 +76,8 @@ def main() -> int:
           == fa["summary"]["candidates"])
     check("every bucket value is legal",
           all(f["bucket"] in ("observed", "inferred", "team") for f in fa["findings"]))
-    check("observed findings all cite evidence",
-          all(f["evidence"] for f in fa["findings"] if f["bucket"] == "observed"))
+    check("every asserted finding cites evidence",
+          all(f["evidence"] for f in fa["findings"] if f["bucket"] in ("observed", "inferred")))
     check("observed and inferred findings carry a refutation",
           all(f["refuted_by"] for f in fa["findings"] if f["bucket"] in ("observed", "inferred")))
     check("evidence is deduplicated",
@@ -105,6 +105,20 @@ def main() -> int:
     check("report contains no numeric grade",
           not re.search(r"\b(?:risk|security|threat)\s+score\b|\b\d{1,3}\s*/\s*(?:10|100)\b", rpt, re.I))
     check("report carries coverage forward", "## Coverage" in rpt)
+
+    print("target shape:")
+    check("fixture reads as an application", inv["target"]["shape"] == "application")
+    check("shape decision carries its reasons", bool(inv["target"]["shape_evidence"]))
+
+    lib = dict(inv)
+    lib["target"] = dict(inv["target"], shape="library")
+    fa_lib = analyze(lib)
+    check("a library asserts nothing about deployment",
+          all(f["bucket"] == "team" for f in fa_lib["findings"]
+              if f["check_id"] in DEPLOYMENT_ASSUMING))
+    check("library findings say whose question it is",
+          all(f["detail"].startswith("This target is a library")
+              for f in fa_lib["findings"] if f["check_id"] in DEPLOYMENT_ASSUMING))
 
     print("catalogue:")
     cat = catalogue()

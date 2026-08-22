@@ -43,8 +43,38 @@ def _sort_key(c: Candidate) -> tuple:
     )
 
 
+# Checks whose premise is a deployed, operated system. On a library these are not gaps.
+DEPLOYMENT_ASSUMING = {
+    "identity/shared-principal", "identity/credential-lifetime",
+    "steering/no-mediation-layer", "steering/no-stop-control",
+    "steering/effects-outside-tool-boundary",
+    "autonomy/consequential-without-approval", "autonomy/blast-radius",
+    "evidence/no-tracing", "evidence/logging-without-redaction",
+    "fleet/admission-and-fairness", "fleet/fanout-without-bounds",
+    "data/egress-without-classification", "data/residency-and-retention",
+    "data/non-network-egress", "intent/purpose-not-represented",
+    "state/persistence-without-expiry",
+}
+
+LIBRARY_PREFIX = (
+    "This target is a library, so this is not a gap in it — it is a question its CONSUMERS "
+    "must answer, and a property to check in whatever application embeds it. "
+)
+
+
 def analyze(inventory: dict) -> dict:
-    candidates = sorted(run_all(inventory), key=_sort_key)
+    shape = inventory.get("target", {}).get("shape", "unknown")
+    candidates = run_all(inventory)
+
+    if shape == "library":
+        for c in candidates:
+            if c.check_id in DEPLOYMENT_ASSUMING:
+                c.detail = LIBRARY_PREFIX + c.detail
+                if c.bucket in ("observed", "inferred"):
+                    c.bucket = "team"
+                c.consequence = "low" if c.consequence == "medium" else c.consequence
+
+    candidates = sorted(candidates, key=_sort_key)
 
     by_bucket: dict[str, list[dict]] = {"observed": [], "inferred": [], "team": []}
     for c in candidates:
@@ -56,6 +86,7 @@ def analyze(inventory: dict) -> dict:
     return {
         "atm_version": inventory.get("atm_version"),
         "target": inventory.get("target", {}),
+        "target_shape": shape,
         "summary": {
             "candidates": len(candidates),
             "observed": len(by_bucket["observed"]),

@@ -796,17 +796,20 @@ def _data_residency(inv: dict) -> list[Candidate]:
 )
 def _context_untrusted(inv: dict) -> list[Candidate]:
     retrieval = _has(inv, "persistence", "vector_store")
-    readers = [t for t in _tools(inv, ("read_only",))]
-    hosts = bool(inv.get("egress_hosts"))
-    if not (retrieval or readers or hosts):
+    readers = _tools(inv, ("read_only",))
+    # A URL literal is NOT evidence that fetched content reaches the model. Infrastructure
+    # endpoints -- object storage, sidecars, package mirrors -- are literals too. Requiring a
+    # retrieval store or a read tool keeps this check on content that actually enters context.
+    if not (retrieval or readers):
         return []
     sources = []
     if retrieval:
         sources.append("a vector store")
     if readers:
         sources.append(f"{len(readers)} read tool(s)")
-    if hosts:
-        sources.append("external hosts")
+    evidence = _tool_ev(readers, limit=3) + _ev(inv, "persistence", "vector_store", limit=2)
+    if not evidence:
+        return []
     return [Candidate(
         check_id="context/untrusted-content-reaches-model",
         area="context",
@@ -814,14 +817,17 @@ def _context_untrusted(inv: dict) -> list[Candidate]:
         consequence="high",
         title="Fetched content reaches the model with no visible provenance or trust marking",
         detail=(
-            "Content arrives from " + ", ".join(sources) + ", and nothing in the scanned source "
+            "Content arrives from " + " and ".join(sources) + ", and nothing in the scanned source "
             "marks where a piece of context came from or distinguishes it from operator "
             "instruction at the point the model reads it. The failure is not that retrieval is "
             "wrong — it is that retrieved text and instructions occupy the same channel, so a "
             "document can propose actions and be read as though the operator had."
         ),
-        evidence=_tool_ev(readers, limit=3) + _ev(inv, "persistence", "vector_store", limit=2),
-        refuted_by=["all retrieved content originates inside a trust boundary the team controls"],
+        evidence=evidence,
+        refuted_by=[
+            "all retrieved content originates inside a trust boundary the team controls",
+            "provenance is attached downstream of the retrieval call",
+        ],
         resolves_to="Show how the model tells a retrieved document from an operator instruction.",
         subjects=_names(readers),
     )]

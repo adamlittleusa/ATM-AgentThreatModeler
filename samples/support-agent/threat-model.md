@@ -8,6 +8,8 @@ Candidate findings from ATM v0.1.0. 21 checks run; 16 raised — **3 observed, 7
 
 Built on LangGraph, OpenAI API, LangChain. 5 declared tools (3 writes, 1 no io detected, 1 read only). It checkpoints, so runs survive a pause; has no tracing detected.
 
+x because: `worker.py` at the repository root; tool declarations sit in production paths.
+
 _This paragraph is assembled from detected facts. Replace it with a real description of the system's job and blast radius before this goes in front of anyone._
 
 ## Observed (3)
@@ -76,7 +78,7 @@ _The pattern points this way; the code does not settle it. Each carries what wou
 
 `context/untrusted-content-reaches-model` · Context trust · consequence: high
 
-Content arrives from 1 read tool(s), external hosts, and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong — it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.
+Content arrives from 1 read tool(s), and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong — it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.
 
 **Evidence**
 
@@ -85,6 +87,7 @@ Content arrives from 1 read tool(s), external hosts, and nothing in the scanned 
 **Would be wrong if**
 
 - all retrieved content originates inside a trust boundary the team controls
+- provenance is attached downstream of the retrieval call
 
 → _Closes when:_ Show how the model tells a retrieved document from an operator instruction.
 

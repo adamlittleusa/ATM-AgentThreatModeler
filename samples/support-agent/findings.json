@@ -2,6 +2,11 @@
   "atm_version": "0.1.0",
   "target": {
     "root": "support-agent",
+    "shape": "application",
+    "shape_evidence": [
+      "`worker.py` at the repository root",
+      "tool declarations sit in production paths"
+    ],
     "excluded_patterns": [],
     "excluded_files": 0,
     "files_seen": 6,
@@ -12,6 +17,7 @@
     ],
     "unparsed_code_files": {}
   },
+  "target_shape": "application",
   "summary": {
     "candidates": 16,
     "observed": 3,
@@ -131,7 +137,7 @@
       "bucket": "inferred",
       "consequence": "high",
       "title": "Fetched content reaches the model with no visible provenance or trust marking",
-      "detail": "Content arrives from 1 read tool(s), external hosts, and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong \u2014 it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.",
+      "detail": "Content arrives from 1 read tool(s), and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong \u2014 it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.",
       "evidence": [
         {
           "file": "tools/crm.py",
@@ -140,7 +146,8 @@
         }
       ],
       "refuted_by": [
-        "all retrieved content originates inside a trust boundary the team controls"
+        "all retrieved content originates inside a trust boundary the team controls",
+        "provenance is attached downstream of the retrieval call"
       ],
       "resolves_to": "Show how the model tells a retrieved document from an operator instruction.",
       "subjects": [
@@ -661,7 +668,7 @@
         "bucket": "inferred",
         "consequence": "high",
         "title": "Fetched content reaches the model with no visible provenance or trust marking",
-        "detail": "Content arrives from 1 read tool(s), external hosts, and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong \u2014 it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.",
+        "detail": "Content arrives from 1 read tool(s), and nothing in the scanned source marks where a piece of context came from or distinguishes it from operator instruction at the point the model reads it. The failure is not that retrieval is wrong \u2014 it is that retrieved text and instructions occupy the same channel, so a document can propose actions and be read as though the operator had.",
         "evidence": [
           {
             "file": "tools/crm.py",
@@ -670,7 +677,8 @@
           }
         ],
         "refuted_by": [
-          "all retrieved content originates inside a trust boundary the team controls"
+          "all retrieved content originates inside a trust boundary the team controls",
+          "provenance is attached downstream of the retrieval call"
         ],
         "resolves_to": "Show how the model tells a retrieved document from an operator instruction.",
         "subjects": [

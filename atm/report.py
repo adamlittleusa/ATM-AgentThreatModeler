@@ -41,6 +41,21 @@ def render_findings(fa: dict, inventory: dict | None = None) -> str:
     add("")
     add(f"> **Status: {fa['status']}.** {fa['next_step']}")
     add("")
+    shape = fa.get("target_shape", "unknown")
+    if shape == "library":
+        add(
+            "> **This target reads as a library, not a deployed agent.** Checks that assume a "
+            "running system have been rerouted into questions for whoever embeds it — a library "
+            "legitimately holds no credentials, mediates nothing, and has no deployment to govern. "
+            "Point ATM at a consuming application for a real answer."
+        )
+        add("")
+    elif shape == "unknown":
+        add(
+            "> **Whether this is a deployed application or a library could not be determined.** "
+            "That distinction changes which findings below are meaningful. Settle it first."
+        )
+        add("")
 
     # --- what the system looks like
     if inventory:
@@ -49,7 +64,7 @@ def render_findings(fa: dict, inventory: dict | None = None) -> str:
         fw = ", ".join(inventory.get("frameworks", {})) or "no framework fingerprinted"
         ts = inventory.get("tool_summary", {})
         by = ts.get("by_effect_class", {})
-        shape = []
+        shape: list[str] = []
         if inventory.get("persistence", {}).get("checkpointer"):
             shape.append("checkpoints, so runs survive a pause")
         conc = inventory.get("concurrency", {})
@@ -66,6 +81,11 @@ def render_findings(fa: dict, inventory: dict | None = None) -> str:
             f"({', '.join(f'{v} {k.replace(chr(95), chr(32))}' for k, v in sorted(by.items(), key=lambda kv: -kv[1]))}). "
             f"It {'; '.join(shape)}."
         )
+        ev = inventory.get("target", {}).get("shape_evidence") or []
+        if ev:
+            add("")
+            add(f"x because: "
+                + "; ".join(ev) + ".")
         add("")
         add(
             "_This paragraph is assembled from detected facts. Replace it with a real description "
