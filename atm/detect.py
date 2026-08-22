@@ -170,7 +170,8 @@ OBSERVABILITY_PATTERNS: list[tuple[re.Pattern, str]] = [
 # Concurrency and fan-out
 # --------------------------------------------------------------------------
 CONCURRENCY_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r"(?<![\w.])Send\s*\(|\.spawn\s*\(|\bcreate_react_agent\b"), "subagent_spawn"),
+    (re.compile(r"(?<![\w.])Send\s*\(|\.spawn\s*\(|\bcreate_\w*agent\b\s*\([^)]*agents\s*="), "subagent_spawn"),
+    (re.compile(r"\bcreate_react_agent\b|\bAgent\s*\(|\bworkflow\.compile\s*\("), "agent_construction"),
     (re.compile(r"\bsub_?agents?\b|\bhandoff\b|\bdelegate_to\b", re.I), "delegation"),
     (re.compile(r"\b(asyncio\.gather|ThreadPoolExecutor|ProcessPoolExecutor|as_completed)\b"), "parallel_execution"),
     (re.compile(r"\b(Semaphore|max_concurrency|max_workers|rate_limit|RateLimiter|ratelimit|Throttle)\b", re.I), "concurrency_bound"),
@@ -204,6 +205,41 @@ ENV_READ = re.compile(r"""os\.(?:environ\.get|getenv)\s*\(\s*["']([A-Z0-9_]+)["'
 
 URL_LITERAL = re.compile(r"""["'](https?://[^"'\s]+)["']""")
 
+# Text that addresses whatever machine reads the repository. Deliberately narrow:
+# this is a prompt for human eyes, not a classifier. Legitimate prompt templates
+# will match, which is why every hit is reported for classification rather than
+# treated as malicious.
+INSTRUCTION_SHAPED = re.compile(
+    r"""(?ix)
+    (?:
+      # override of a prior directive
+        (?:ignore|disregard|forget)\s+(?:all\s+|any\s+)?
+        (?:previous|prior|above|earlier|the\s+foregoing)\s+
+        (?:instructions?|rules?|findings?|directions?|guidance)
+      # suppression aimed at a reviewer or scanner
+      | (?:do\s+not|don't|never)\s+(?:\w+\s+){0,2}
+        (?:report|flag|raise|surface|include)\s+(?:\w+\s+){0,3}
+        (?:finding|issue|vulnerabilit|weakness|credential|secret|risk)
+      # a claim of prior clearance addressed at whatever reads it
+      | (?:this|the\s+following)\s+(?:file|module|function|code|repo\w*|section)\s+
+        (?:is|has\s+been|was)\s+
+        (?:already\s+)?(?:vetted|pre-?approved|security[- ]reviewed|audited\s+and\s+cleared)
+      # instruction to skip
+      | (?:skip|exclude|omit|bypass)\s+(?:this|the\s+following)\s+
+        (?:file|module|check|scan|audit|review|section|finding)
+      # instruction to grade
+      | (?:mark|treat|consider|report)\s+(?:this|it|the\s+\w+)\s+as\s+
+        (?:safe|passing|compliant|secure|clean|no[- ]risk)
+      # smuggled role framing
+      | </?\s*(?:system|instructions?|im_start)\s*>
+      | ^\s*(?:system|developer)\s*:\s*(?:you\s+(?:are|must|should)|ignore|disregard)
+      # direct address to an automated reader
+      | (?:AI|LLM|model|agent|assistant|automated)\s+
+        (?:reviewer|auditor|scanner|reader|analy[sz]er)s?\s*[:,]
+    )
+    """
+)
+
 
 # --------------------------------------------------------------------------
 # Per-file analysis
@@ -226,6 +262,7 @@ class FileFacts:
     data_handling: dict[str, list[Evidence]] = field(default_factory=dict)
     urls: dict[str, list[Evidence]] = field(default_factory=dict)
     side_effects_outside_tools: dict[str, list[Evidence]] = field(default_factory=dict)
+    suspicious_instructions: list[Evidence] = field(default_factory=list)
 
 
 def _add(bucket: dict[str, list[Evidence]], key: str, ev: Evidence, cap: int = 12) -> None:
@@ -340,9 +377,17 @@ def analyze_python(path: Path, rel: str, text: str) -> FileFacts:
 
     for i, line in enumerate(src_lines, start=1):
         stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
+        if not stripped:
             continue
         ev = Evidence(rel, i, stripped[:160])
+
+        # Instruction-shaped text is scanned everywhere, comments included --
+        # a planted instruction is most likely to be left in a comment.
+        if INSTRUCTION_SHAPED.search(line) and len(facts.suspicious_instructions) < 25:
+            facts.suspicious_instructions.append(ev)
+
+        if stripped.startswith("#"):
+            continue
 
         m = ENV_READ.search(line)
         if m:

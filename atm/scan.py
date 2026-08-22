@@ -62,6 +62,7 @@ def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = N
     data_handling: dict[str, list[dict]] = {}
     hosts: dict[str, list[dict]] = {}
     loose_side_effects: dict[str, list[dict]] = {}
+    suspicious: list[dict] = []
 
     py_files = 0
     py_lines = 0
@@ -132,6 +133,9 @@ def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = N
         for ev in facts.secret_literals:
             if len(secret_literals) < 40:
                 secret_literals.append(ev.to_dict())
+        for ev in facts.suspicious_instructions:
+            if len(suspicious) < 60:
+                suspicious.append(ev.to_dict())
 
     # ---- effect summary
     effect_counts: dict[str, int] = defaultdict(int)
@@ -179,6 +183,12 @@ def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = N
         "Runtime configuration, deployment topology, IAM policy, and operational practice are "
         "outside the reach of any static pass and must be established by interview."
     )
+    if suspicious:
+        notes.append(
+            f"{len(suspicious)} line(s) contain text shaped like an instruction to a machine reader. "
+            "Prompt templates and test fixtures match this too; each needs classification by eye. "
+            "Nothing in the scanned repository was followed as instruction."
+        )
     if exclude:
         notes.append(
             f"{excluded_files} file(s) matched an --exclude pattern ({', '.join(exclude)}) and were "
@@ -224,6 +234,7 @@ def scan(root: Path, include_hidden: bool = False, exclude: list[str] | None = N
         "data_handling": data_handling,
         "egress_hosts": hosts,
         "side_effects_outside_tools": loose_side_effects,
+        "suspicious_instructions": suspicious,
         "parse_failures": parse_failures,
         "coverage_notes": notes,
     }

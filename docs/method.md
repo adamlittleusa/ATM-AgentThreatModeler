@@ -113,21 +113,40 @@ a handoff to another agent are all ways data leaves its authorized audience.
 
 Each check declares four things, which is what keeps the output honest:
 
-```yaml
-id: identity/shared-principal
-area: identity
-question: Does each tool act under a distinct, scoped principal?
-satisfied_by:      # evidence that the control is present
-  - distinct credential per tool or per operation class
-  - token exchange or assume-role before a privileged call
-refuted_by:        # evidence that a candidate finding is wrong
-  - the shared token is exchanged upstream for a narrower one
-  - all tools genuinely address one system with one scope
-answerable_from_code: partial   # full | partial | none
+```python
+@check(
+    id="identity/shared-principal",
+    area="identity",
+    question="Does each tool act under a distinct, scoped principal?",
+    answerable="partial",          # code | partial | team
+    applies_when="credentials are read and more than one tool exists",
+    satisfied_by=["a distinct credential per tool or per operation class",
+                  "token exchange before a privileged call"],
+    refuted_by=["the shared token is exchanged upstream for a narrower one",
+                "all tools genuinely address one system under one scope",
+                "scoping happens at the gateway rather than in the credential"],
+)
+def _identity_shared(inventory) -> list[Candidate]:
+    ...  # may only assert what the inventory shows, and must attach its evidence
 ```
 
-`answerable_from_code` is what routes a check into one of the three buckets. A check marked `none`
-can never produce an OBSERVED finding — it produces a question.
+`answerable` is what routes a check into one of the three buckets:
+
+- **code** — a repository can settle the question outright. Produces an *observed* finding.
+- **partial** — the code raises it; only the team can close it. Produces an *inferred* finding.
+- **team** — no repository can answer it. Produces a *question*, never a finding.
+
+A check marked `team` is forbidden from declaring `satisfied_by`, because there is no code
+evidence that could satisfy it. That constraint is enforced by the test suite rather than by
+convention.
+
+`refuted_by` travels into the report with the finding. The refutation pass needs something
+concrete to attack, and a reader deserves to know what would make the claim wrong before they
+carry it into a meeting.
+
+Checks live in Python rather than a data file so that predicate and prose stay together and stay
+testable. The catalogue renders to markdown with `python -m atm checks`; the current one is at
+[`checks.md`](checks.md).
 
 ### Refutation
 

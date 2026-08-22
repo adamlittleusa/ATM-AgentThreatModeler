@@ -7,7 +7,10 @@ import json
 import sys
 from pathlib import Path
 
+from .analyze import analyze, write_findings
+from .checks import catalogue
 from .render import render_markdown
+from .report import render_catalogue, render_findings
 from .scan import ATM_VERSION, scan, write_inventory
 
 
@@ -39,6 +42,16 @@ def main(argv: list[str] | None = None) -> int:
         help="skip paths matching this glob (repeatable), e.g. --exclude 'tests/*' --exclude 'examples/*'",
     )
 
+    an = sub.add_parser("analyze", help="run the checks over an inventory and emit candidate findings")
+    an.add_argument("path", type=Path, help="repository path, or an existing inventory.json")
+    an.add_argument("-o", "--out", type=Path, default=Path("atm-out"), help="output directory")
+    an.add_argument("--exclude", action="append", default=[], metavar="GLOB",
+                    help="skip paths matching this glob (repeatable); ignored when reading an inventory.json")
+    an.add_argument("--stdout", action="store_true", help="print the report instead of writing files")
+
+    ck = sub.add_parser("checks", help="print the check catalogue")
+    ck.add_argument("--json", action="store_true", help="emit JSON instead of markdown")
+
     args = parser.parse_args(argv)
 
     if args.command == "scan":
@@ -68,6 +81,51 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  coverage notes: {len(inventory['coverage_notes'])}")
         for p in written:
             print(f"  wrote {p}")
+        return 0
+
+    if args.command == "analyze":
+        try:
+            if args.path.is_file():
+                inventory = json.loads(args.path.read_text(encoding="utf-8"))
+            else:
+                inventory = scan(args.path, exclude=args.exclude)
+        except (NotADirectoryError, FileNotFoundError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        except json.JSONDecodeError as exc:
+            print(f"error: {args.path} is not valid JSON ({exc})", file=sys.stderr)
+            return 2
+
+        findings = analyze(inventory)
+        report = render_findings(findings, inventory)
+
+        if args.stdout:
+            print(report)
+            return 0
+
+        out_dir: Path = args.out
+        write_inventory(inventory, out_dir / "inventory.json")
+        (out_dir / "surface-map.md").write_text(render_markdown(inventory), encoding="utf-8")
+        write_findings(findings, out_dir / "findings.json")
+        (out_dir / "threat-model.md").write_text(report, encoding="utf-8")
+
+        s_ = findings["summary"]
+        print(f"atm {ATM_VERSION}: {s_['checks_run']} checks -> {s_['candidates']} candidates")
+        print(f"  observed  {s_['observed']}")
+        print(f"  inferred  {s_['inferred']}")
+        print(f"  questions {s_['team_questions']}")
+        print(f"  areas     {', '.join(a['area'] for a in s_['areas_raised'])}")
+        for name in ("inventory.json", "surface-map.md", "findings.json", "threat-model.md"):
+            print(f"  wrote {out_dir / name}")
+        print("\n  These are unrefuted candidates. Run /atm-scan to verify citations and refute.")
+        return 0
+
+    if args.command == "checks":
+        cat = catalogue()
+        if args.json:
+            print(json.dumps(cat, indent=2))
+        else:
+            print(render_catalogue(cat))
         return 0
 
     return 1

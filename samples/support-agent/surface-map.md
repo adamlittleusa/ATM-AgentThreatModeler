@@ -2,7 +2,7 @@
 
 Collected by ATM v0.1.0 (static pass, Python only). Facts with citations; no findings and no grading. Read the coverage limits at the end before drawing conclusions from an absence.
 
-**Scanned:** 5 Python files (106 lines) out of 6 files seen.
+**Scanned:** 5 Python files (112 lines) out of 6 files seen.
 
 ## Frameworks in use
 
@@ -69,7 +69,7 @@ _No tracing or structured logging was detected._
 
 ## Concurrency, retry, and coordination
 
-- **subagent_spawn** — `graph/build.py:5`, `graph/build.py:21`
+- **agent_construction** — `graph/build.py:5`, `graph/build.py:21`
 
 ## Data handling
 
@@ -91,6 +91,7 @@ What this pass could not see. Every conclusion drawn downstream inherits these l
 - No mediation signal (interrupt, approval, guardrail, hook, policy engine, sandbox) was found anywhere in the scanned source. Absence here is weak evidence: mediation may live in infrastructure this collector cannot see.
 - Effect classification is pattern-based. A tool marked no_io_detected may still cause side effects through a helper this collector did not follow across files.
 - Runtime configuration, deployment topology, IAM policy, and operational practice are outside the reach of any static pass and must be established by interview.
+- 2 line(s) contain text shaped like an instruction to a machine reader. Prompt templates and test fixtures match this too; each needs classification by eye. Nothing in the scanned repository was followed as instruction.
 
 ---
 

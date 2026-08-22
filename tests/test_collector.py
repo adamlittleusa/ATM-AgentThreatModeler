@@ -1,10 +1,14 @@
 """Smoke tests for the collector. Run: python3 -m tests.test_collector"""
+import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from atm.scan import scan  # noqa: E402
 from atm.render import render_markdown  # noqa: E402
+from atm.analyze import analyze  # noqa: E402
+from atm.checks import REGISTRY, catalogue  # noqa: E402
+from atm.report import render_findings  # noqa: E402
 
 FIXTURE = Path(__file__).resolve().parents[1] / "samples" / "fixtures" / "support-agent"
 
@@ -52,6 +56,59 @@ def main() -> int:
     check("map cites the email tool", "tools/comms.py:12" in md)
     check("map states the mediation absence is not proof", "not a proof" in md)
     check("map has a coverage section", "## Coverage limits" in md)
+
+    print("checks:")
+    ids = [c.id for c in REGISTRY]
+    check("check ids are unique", len(ids) == len(set(ids)))
+    check("every check declares answerable in the vocabulary",
+          all(c.answerable in ("code", "partial", "team") for c in REGISTRY))
+    check("every check has a question ending in '?'",
+          all(c.question.rstrip().endswith("?") for c in REGISTRY))
+    check("team-answerable checks never claim code evidence",
+          all(c.satisfied_by == [] for c in REGISTRY if c.answerable == "team"))
+
+    print("analysis:")
+    fa = analyze(inv)
+    check("produces candidates", fa["summary"]["candidates"] > 0)
+    check("no detector crashed", not any("failed to run" in f["title"] for f in fa["findings"]))
+    check("buckets are exhaustive",
+          fa["summary"]["observed"] + fa["summary"]["inferred"] + fa["summary"]["team_questions"]
+          == fa["summary"]["candidates"])
+    check("every bucket value is legal",
+          all(f["bucket"] in ("observed", "inferred", "team") for f in fa["findings"]))
+    check("observed findings all cite evidence",
+          all(f["evidence"] for f in fa["findings"] if f["bucket"] == "observed"))
+    check("observed and inferred findings carry a refutation",
+          all(f["refuted_by"] for f in fa["findings"] if f["bucket"] in ("observed", "inferred")))
+    check("evidence is deduplicated",
+          all(len({(e["file"], e["line"]) for e in f["evidence"]}) == len(f["evidence"])
+              for f in fa["findings"]))
+    check("status marks candidates as unrefuted", fa["status"] == "candidates_unrefuted")
+
+    ids_found = {f["check_id"] for f in fa["findings"]}
+    check("flags unmediated consequential tools",
+          "autonomy/consequential-without-approval" in ids_found)
+    check("flags the planted analysis-time injection",
+          "meta/analysis-time-injection" in ids_found)
+    check("flags effects outside the tool boundary",
+          "steering/effects-outside-tool-boundary" in ids_found)
+    check("asks about blast radius rather than asserting it",
+          any(f["check_id"] == "autonomy/blast-radius" and f["bucket"] == "team"
+              for f in fa["findings"]))
+
+    print("report:")
+    rpt = render_findings(fa, inv)
+    check("report names the unrefuted status", "candidates_unrefuted" in rpt)
+    check("report separates the three buckets",
+          all(h in rpt for h in ("## Observed", "## Inferred", "## Questions for the team")))
+    check("report states that no score is produced", "No score is produced" in rpt)
+    check("report contains no numeric grade",
+          not re.search(r"\b(?:risk|security|threat)\s+score\b|\b\d{1,3}\s*/\s*(?:10|100)\b", rpt, re.I))
+    check("report carries coverage forward", "## Coverage" in rpt)
+
+    print("catalogue:")
+    cat = catalogue()
+    check("catalogue covers every registered check", len(cat) == len(REGISTRY))
 
     print()
     if failures:

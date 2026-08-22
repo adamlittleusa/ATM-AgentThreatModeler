@@ -4,8 +4,9 @@ A threat-modeling tool for AI agent codebases. Point it at a repository; get bac
 agent's surface, a set of evidence-backed findings, and — the part most tools skip — an explicit
 list of the questions the code cannot answer.
 
-**Status: v0.1, collector only.** The static collector works and is usable today. The analysis and
-reporting layers are in progress. See [Roadmap](#roadmap).
+**Status: v0.2.** Collector, check catalogue, and candidate findings all work end to end. What is
+still manual is the refutation pass — reading the cited files to disprove what the code disproves —
+which the bundled Claude Code command drives. See [Roadmap](#roadmap).
 
 ---
 
@@ -94,18 +95,31 @@ No dependencies beyond the Python standard library. Python 3.10+.
 git clone https://github.com/adamlittleusa/ATM-AgentThreatModeler
 cd ATM-AgentThreatModeler
 
-# scan a repository
+# inventory only — facts, no judgement
 python -m atm scan /path/to/agent-repo
 
-# skip sample and test code to see the production surface only
-python -m atm scan /path/to/agent-repo --exclude 'tests/*' --exclude 'examples/*'
+# inventory plus candidate findings
+python -m atm analyze /path/to/agent-repo
 
-# print to stdout instead of writing files
-python -m atm scan /path/to/agent-repo --stdout
+# skip sample and test code to see the production surface only
+python -m atm analyze /path/to/agent-repo --exclude 'tests/*' --exclude 'examples/*'
+
+# print the check catalogue
+python -m atm checks
 ```
 
-Writes `atm-out/inventory.json` (machine-readable facts) and `atm-out/surface-map.md`
-(human-readable map).
+`analyze` writes four files to `atm-out/`:
+
+| File | What it is |
+|---|---|
+| `inventory.json` | Facts with `file:line` citations, plus what the pass could not see |
+| `surface-map.md` | The inventory, readable |
+| `findings.json` | Candidate findings, bucketed and ordered by consequence |
+| `threat-model.md` | The reviewer's working document |
+
+Findings from `analyze` are **candidates, not conclusions** — every one carries what would refute
+it, and refuting takes a reader who can open the files. The `/atm-scan` command in `plugin/` drives
+that second pass.
 
 ### Try it against the bundled fixture
 
@@ -114,8 +128,9 @@ python -m atm scan samples/fixtures/support-agent --stdout
 ```
 
 A deliberately under-governed support agent: three side-effecting tools, one shared service token,
-no mediation, no tracing. Committed output:
-[`samples/support-agent/surface-map.md`](samples/support-agent/surface-map.md).
+no mediation, no tracing, and a planted instruction aimed at whatever reads the repo. Committed
+output: [`surface-map.md`](samples/support-agent/surface-map.md) ·
+[`threat-model.md`](samples/support-agent/threat-model.md).
 
 ---
 
@@ -133,6 +148,7 @@ no mediation, no tracing. Committed output:
 | **Coordination** | Subagent spawning, delegation, parallel execution, concurrency bounds, retry, idempotency, quotas and breakers |
 | **Data handling** | Redaction, PII detection, classification, secret managers, encryption, retention |
 | **Egress** | Hosts appearing as URL literals |
+| **Analysis integrity** | Instruction-shaped text addressed to a machine reader — tuned for precision, and every hit is reported for classification rather than assumed malicious |
 
 Known limits, stated up front: Python only; single-file analysis without cross-file call graphs;
 pattern matching produces false positives; runtime configuration and infrastructure are invisible.
@@ -143,16 +159,25 @@ Every scan emits these as coverage notes alongside the results.
 ## Roadmap
 
 - [x] **v0.1 — Collector.** Static pass, `inventory.json`, surface map, coverage notes.
-- [ ] **v0.2 — Findings.** Checks for the three most detectable control areas (identity, live
-  intervention, egress), plus the refutation pass and the three-bucket split.
-- [ ] **v0.3 — Full report.** All control areas, the generated interview script, layered threat map,
-  HTML output.
+- [x] **v0.2 — Findings.** 21 checks across nine control areas, the three-bucket split, the
+  generated interview script, and analysis-time injection detection.
+- [ ] **v0.3 — Refutation and reporting.** Automated citation verification, client-facing and
+  published renderings, HTML output, layered threat map.
 - [ ] **v0.4 — Public case studies.** ATM run against well-known open-source agent projects, with
   results published here.
 - [ ] **Later.** TypeScript/JavaScript collector, cross-file call graph, MCP server manifest parsing,
   CI mode.
 
 ---
+
+## The check catalogue
+
+21 checks across nine control areas — autonomy and approval, identity and delegation, purpose
+boundaries, context trust, persistent state, evidence and observability, live intervention, fleet
+behavior under load, and data governance — plus one on analysis integrity.
+
+Full catalogue with each question, what satisfies it, and what refutes it:
+[`docs/checks.md`](docs/checks.md). The method behind them: [`docs/method.md`](docs/method.md).
 
 ## Design constraints
 
