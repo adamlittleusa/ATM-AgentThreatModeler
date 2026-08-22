@@ -17,3 +17,9 @@ corpus/
 harness-threat-model/
 *.skill
 references/
+
+# Scan outputs against real targets stay private. Only the synthetic fixture's
+# output is committed, under samples/.
+case-studies/
+atm-case-studies/
+scans/
