@@ -79,10 +79,13 @@ rests on stating its own limits.
 Before any PR:
 
 ```bash
-python3 tests/test_collector.py                              # must be all green
-python3 -m atm analyze samples/fixtures/support-agent --html  # regenerate committed sample
-python3 -m atm checks > docs/checks.md                        # regenerate the catalogue
+python3 tests/test_collector.py                                                    # must be all green
+python3 -m atm analyze samples/fixtures/support-agent -o samples/support-agent --html  # regenerate committed sample
+python3 -m atm checks > docs/checks.md                                             # regenerate the catalogue
 ```
+
+On Windows, set `PYTHONUTF8=1` before the redirect into `docs/checks.md` — without it the shell
+writes cp1252 and corrupts the em-dashes. CI enforces that these artifacts match the code.
 
 The last two keep committed artifacts in sync with the code. A PR that changes checks without
 regenerating them will show a confusing diff later.
