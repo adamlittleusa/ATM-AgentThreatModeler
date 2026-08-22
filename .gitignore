@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+atm-out/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
+
+# The framework corpus is private and must never be committed here.
+corpus/
+harness-threat-model/
+*.skill
+references/

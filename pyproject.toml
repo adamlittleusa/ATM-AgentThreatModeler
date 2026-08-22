@@ -1,0 +1,20 @@
+[project]
+name = "atm-agentthreatmodeler"
+version = "0.1.0"
+description = "Threat-modeling tool for AI agent codebases: static collector, evidence-backed findings, and the questions code cannot answer."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Adam Little" }]
+keywords = ["ai-agents", "threat-modeling", "security", "static-analysis", "llm", "maestro"]
+dependencies = []
+
+[project.scripts]
+atm = "atm.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["atm*"]

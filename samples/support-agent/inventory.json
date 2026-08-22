@@ -1,0 +1,305 @@
+{
+  "atm_version": "0.1.0",
+  "target": {
+    "root": "support-agent",
+    "excluded_patterns": [],
+    "excluded_files": 0,
+    "files_seen": 6,
+    "python_files_parsed": 5,
+    "python_lines": 106,
+    "manifests": [
+      "requirements.txt"
+    ],
+    "unparsed_code_files": {}
+  },
+  "frameworks": {
+    "LangGraph": [
+      {
+        "file": "graph/build.py",
+        "line": 4,
+        "snippet": "from langgraph.checkpoint.postgres import PostgresSaver"
+      },
+      {
+        "file": "graph/build.py",
+        "line": 5,
+        "snippet": "from langgraph.prebuilt import create_react_agent"
+      },
+      {
+        "file": "requirements.txt",
+        "line": 1,
+        "snippet": "langgraph>=0.2"
+      }
+    ],
+    "OpenAI API": [
+      {
+        "file": "graph/build.py",
+        "line": 6,
+        "snippet": "from openai import OpenAI"
+      },
+      {
+        "file": "requirements.txt",
+        "line": 3,
+        "snippet": "openai>=1.40"
+      }
+    ],
+    "LangChain": [
+      {
+        "file": "requirements.txt",
+        "line": 2,
+        "snippet": "langchain-core>=0.3"
+      },
+      {
+        "file": "tools/comms.py",
+        "line": 4,
+        "snippet": "from langchain_core.tools import tool"
+      },
+      {
+        "file": "tools/crm.py",
+        "line": 6,
+        "snippet": "from langchain_core.tools import tool"
+      }
+    ]
+  },
+  "tools": [
+    {
+      "name": "send_customer_email",
+      "declared_by": "LangChain @tool",
+      "file": "tools/comms.py",
+      "line": 12,
+      "end_line": 18,
+      "docstring": "Send an email to a customer.",
+      "effect_class": "writes",
+      "side_effects": [
+        {
+          "kind": "messaging",
+          "description": "email send",
+          "matched": "SendGridAPIClient"
+        }
+      ],
+      "evidence": {
+        "file": "tools/comms.py",
+        "line": 12,
+        "snippet": "def send_customer_email(to_address: str, subject: str, body: str) -> str:"
+      }
+    },
+    {
+      "name": "summarize_thread",
+      "declared_by": "LangChain @tool",
+      "file": "tools/comms.py",
+      "line": 22,
+      "end_line": 24,
+      "docstring": "Summarize a support thread.",
+      "effect_class": "no_io_detected",
+      "side_effects": [],
+      "evidence": {
+        "file": "tools/comms.py",
+        "line": 22,
+        "snippet": "def summarize_thread(thread_text: str) -> str:"
+      }
+    },
+    {
+      "name": "lookup_customer",
+      "declared_by": "LangChain @tool",
+      "file": "tools/crm.py",
+      "line": 14,
+      "end_line": 18,
+      "docstring": "Read a customer record by id.",
+      "effect_class": "read_only",
+      "side_effects": [],
+      "evidence": {
+        "file": "tools/crm.py",
+        "line": 14,
+        "snippet": "def lookup_customer(customer_id: str) -> dict:"
+      }
+    },
+    {
+      "name": "update_customer_note",
+      "declared_by": "LangChain @tool",
+      "file": "tools/crm.py",
+      "line": 22,
+      "end_line": 27,
+      "docstring": "Append a note to a customer record.",
+      "effect_class": "writes",
+      "side_effects": [
+        {
+          "kind": "network_write",
+          "description": "outbound HTTP write",
+          "matched": "requests.post("
+        }
+      ],
+      "evidence": {
+        "file": "tools/crm.py",
+        "line": 22,
+        "snippet": "def update_customer_note(customer_id: str, note: str) -> dict:"
+      }
+    },
+    {
+      "name": "issue_refund",
+      "declared_by": "LangChain @tool",
+      "file": "tools/crm.py",
+      "line": 31,
+      "end_line": 40,
+      "docstring": "Issue a refund against an order.",
+      "effect_class": "writes",
+      "side_effects": [
+        {
+          "kind": "db_write",
+          "description": "SQL write statement",
+          "matched": ".execute(\n                \"INSERT"
+        }
+      ],
+      "evidence": {
+        "file": "tools/crm.py",
+        "line": 31,
+        "snippet": "def issue_refund(order_id: str, amount_cents: int) -> dict:"
+      }
+    }
+  ],
+  "tool_summary": {
+    "count": 5,
+    "by_effect_class": {
+      "writes": 3,
+      "no_io_detected": 1,
+      "read_only": 1
+    },
+    "by_effect_kind": {
+      "messaging": 1,
+      "network_write": 1,
+      "db_write": 1
+    }
+  },
+  "credentials": {
+    "env_reads": {
+      "OPENAI_MODEL": [
+        {
+          "file": "graph/build.py",
+          "line": 11,
+          "snippet": "MODEL = os.getenv(\"OPENAI_MODEL\", \"gpt-4o\")"
+        }
+      ],
+      "OPENAI_API_KEY": [
+        {
+          "file": "graph/build.py",
+          "line": 12,
+          "snippet": "OPENAI_API_KEY = os.environ[\"OPENAI_API_KEY\"]"
+        }
+      ],
+      "SENDGRID_API_KEY": [
+        {
+          "file": "tools/comms.py",
+          "line": 8,
+          "snippet": "SENDGRID_KEY = os.getenv(\"SENDGRID_API_KEY\")"
+        }
+      ],
+      "SERVICE_TOKEN": [
+        {
+          "file": "tools/crm.py",
+          "line": 8,
+          "snippet": "SERVICE_TOKEN = os.environ[\"SERVICE_TOKEN\"]"
+        }
+      ],
+      "DATABASE_URL": [
+        {
+          "file": "tools/crm.py",
+          "line": 9,
+          "snippet": "DB_URL = os.getenv(\"DATABASE_URL\")"
+        }
+      ],
+      "COMPLETION_WEBHOOK": [
+        {
+          "file": "worker.py",
+          "line": 10,
+          "snippet": "WEBHOOK = os.getenv(\"COMPLETION_WEBHOOK\")"
+        }
+      ]
+    },
+    "distinct_env_vars": 6,
+    "possible_hardcoded_secrets": []
+  },
+  "mediation": {},
+  "persistence": {
+    "checkpointer": [
+      {
+        "file": "graph/build.py",
+        "line": 4,
+        "snippet": "from langgraph.checkpoint.postgres import PostgresSaver"
+      },
+      {
+        "file": "graph/build.py",
+        "line": 19,
+        "snippet": "checkpointer = PostgresSaver.from_conn_string(conn_string)"
+      },
+      {
+        "file": "graph/build.py",
+        "line": 21,
+        "snippet": "return create_react_agent(MODEL, TOOLS, checkpointer=checkpointer)"
+      }
+    ]
+  },
+  "observability": {},
+  "concurrency": {
+    "subagent_spawn": [
+      {
+        "file": "graph/build.py",
+        "line": 5,
+        "snippet": "from langgraph.prebuilt import create_react_agent"
+      },
+      {
+        "file": "graph/build.py",
+        "line": 21,
+        "snippet": "return create_react_agent(MODEL, TOOLS, checkpointer=checkpointer)"
+      }
+    ]
+  },
+  "data_handling": {},
+  "egress_hosts": {
+    "crm.internal.acme.example": [
+      {
+        "file": "tools/crm.py",
+        "line": 10,
+        "snippet": "CRM_BASE = \"https://crm.internal.acme.example/v2\""
+      }
+    ],
+    "queue.acme.example": [
+      {
+        "file": "worker.py",
+        "line": 9,
+        "snippet": "QUEUE_URL = \"https://queue.acme.example/tickets\""
+      }
+    ]
+  },
+  "side_effects_outside_tools": {
+    "messaging": [
+      {
+        "file": "worker.py",
+        "line": 10,
+        "snippet": "WEBHOOK = os.getenv(\"COMPLETION_WEBHOOK\")"
+      },
+      {
+        "file": "worker.py",
+        "line": 19,
+        "snippet": "requests.post(WEBHOOK, json={\"ticket\": ticket[\"id\"], \"result\": str(result)}, timeout=10)"
+      }
+    ],
+    "network_write": [
+      {
+        "file": "worker.py",
+        "line": 19,
+        "snippet": "requests.post(WEBHOOK, json={\"ticket\": ticket[\"id\"], \"result\": str(result)}, timeout=10)"
+      }
+    ],
+    "fs_write": [
+      {
+        "file": "worker.py",
+        "line": 20,
+        "snippet": "with open(\"audit.log\", \"a\") as fh:"
+      }
+    ]
+  },
+  "parse_failures": [],
+  "coverage_notes": [
+    "No mediation signal (interrupt, approval, guardrail, hook, policy engine, sandbox) was found anywhere in the scanned source. Absence here is weak evidence: mediation may live in infrastructure this collector cannot see.",
+    "Effect classification is pattern-based. A tool marked no_io_detected may still cause side effects through a helper this collector did not follow across files.",
+    "Runtime configuration, deployment topology, IAM policy, and operational practice are outside the reach of any static pass and must be established by interview."
+  ]
+}
