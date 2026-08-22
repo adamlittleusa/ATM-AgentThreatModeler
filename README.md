@@ -104,6 +104,9 @@ python -m atm analyze /path/to/agent-repo
 # skip sample and test code to see the production surface only
 python -m atm analyze /path/to/agent-repo --exclude 'tests/*' --exclude 'examples/*'
 
+# add a self-contained HTML report
+python -m atm analyze /path/to/agent-repo --html
+
 # print the check catalogue
 python -m atm checks
 ```
@@ -116,6 +119,7 @@ python -m atm checks
 | `surface-map.md` | The inventory, readable |
 | `findings.json` | Candidate findings, bucketed and ordered by consequence |
 | `threat-model.md` | The reviewer's working document |
+| `threat-model.html` | Self-contained HTML report (`--html`) — no external requests, light and dark |
 
 Findings from `analyze` are **candidates, not conclusions** — every one carries what would refute
 it, and refuting takes a reader who can open the files. The `/atm-scan` command in `plugin/` drives
@@ -130,7 +134,8 @@ python -m atm scan samples/fixtures/support-agent --stdout
 A deliberately under-governed support agent: three side-effecting tools, one shared service token,
 no mediation, no tracing, and a planted instruction aimed at whatever reads the repo. Committed
 output: [`surface-map.md`](samples/support-agent/surface-map.md) ·
-[`threat-model.md`](samples/support-agent/threat-model.md).
+[`threat-model.md`](samples/support-agent/threat-model.md) ·
+[`threat-model.html`](samples/support-agent/threat-model.html).
 
 ---
 
@@ -160,9 +165,9 @@ Every scan emits these as coverage notes alongside the results.
 
 - [x] **v0.1 — Collector.** Static pass, `inventory.json`, surface map, coverage notes.
 - [x] **v0.2 — Findings.** 21 checks across nine control areas, the three-bucket split, the
-  generated interview script, and analysis-time injection detection.
+  generated interview script, analysis-time injection detection, and HTML output.
 - [ ] **v0.3 — Refutation and reporting.** Automated citation verification, client-facing and
-  published renderings, HTML output, layered threat map.
+  published renderings, layered threat map.
 - [ ] **v0.4 — Public case studies.** ATM run against well-known open-source agent projects, with
   results published here.
 - [ ] **Later.** TypeScript/JavaScript collector, cross-file call graph, MCP server manifest parsing,

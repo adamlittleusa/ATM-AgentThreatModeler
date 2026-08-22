@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .analyze import analyze, write_findings
 from .checks import catalogue
+from .html import render_html
 from .render import render_markdown
 from .report import render_catalogue, render_findings
 from .scan import ATM_VERSION, scan, write_inventory
@@ -48,6 +49,7 @@ def main(argv: list[str] | None = None) -> int:
     an.add_argument("--exclude", action="append", default=[], metavar="GLOB",
                     help="skip paths matching this glob (repeatable); ignored when reading an inventory.json")
     an.add_argument("--stdout", action="store_true", help="print the report instead of writing files")
+    an.add_argument("--html", action="store_true", help="also write a self-contained HTML report")
 
     ck = sub.add_parser("checks", help="print the check catalogue")
     ck.add_argument("--json", action="store_true", help="emit JSON instead of markdown")
@@ -108,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
         (out_dir / "surface-map.md").write_text(render_markdown(inventory), encoding="utf-8")
         write_findings(findings, out_dir / "findings.json")
         (out_dir / "threat-model.md").write_text(report, encoding="utf-8")
+        written_html = None
+        if args.html:
+            written_html = out_dir / "threat-model.html"
+            written_html.write_text(render_html(findings, inventory), encoding="utf-8")
 
         s_ = findings["summary"]
         print(f"atm {ATM_VERSION}: {s_['checks_run']} checks -> {s_['candidates']} candidates")
@@ -115,7 +121,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  inferred  {s_['inferred']}")
         print(f"  questions {s_['team_questions']}")
         print(f"  areas     {', '.join(a['area'] for a in s_['areas_raised'])}")
-        for name in ("inventory.json", "surface-map.md", "findings.json", "threat-model.md"):
+        names = ["inventory.json", "surface-map.md", "findings.json", "threat-model.md"]
+        if written_html:
+            names.append("threat-model.html")
+        for name in names:
             print(f"  wrote {out_dir / name}")
         print("\n  These are unrefuted candidates. Run /atm-scan to verify citations and refute.")
         return 0
