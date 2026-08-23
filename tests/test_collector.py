@@ -110,6 +110,33 @@ def main() -> int:
     check("fixture reads as an application", inv["target"]["shape"] == "application")
     check("shape decision carries its reasons", bool(inv["target"]["shape_evidence"]))
 
+    print("dual shape:")
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        dual_root = Path(td)
+        (dual_root / "pyproject.toml").write_text(
+            "[build-system]\nrequires = ['setuptools']\n", encoding="utf-8")
+        (dual_root / "main.py").write_text("print('serve')\n", encoding="utf-8")
+        (dual_root / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf-8")
+        (dual_root / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+        dual = scan(dual_root)
+        check("packaged repo with deployment artifacts reads as an application",
+              dual["target"]["shape"] == "application")
+        check("deployment evidence is cited",
+              any("docker-compose" in w or "Dockerfile" in w
+                  for w in dual["target"]["shape_evidence"]))
+    with tempfile.TemporaryDirectory() as td:
+        pure_root = Path(td)
+        (pure_root / "pyproject.toml").write_text(
+            "[build-system]\nrequires = ['setuptools']\n", encoding="utf-8")
+        src = pure_root / "src" / "mylib"
+        src.mkdir(parents=True)
+        (src / "__init__.py").write_text("", encoding="utf-8")
+        (pure_root / "Dockerfile").write_text("FROM python:3.12\n", encoding="utf-8")
+        pure = scan(pure_root)
+        check("a lone dev Dockerfile does not make a library an application",
+              pure["target"]["shape"] == "library")
+
     lib = dict(inv)
     lib["target"] = dict(inv["target"], shape="library")
     fa_lib = analyze(lib)
