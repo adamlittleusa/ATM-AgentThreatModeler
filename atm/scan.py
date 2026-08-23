@@ -78,6 +78,28 @@ def _detect_shape(root: Path, tools: list[dict], manifests: list[str]) -> tuple[
             why.append(f"`{name}` at the repository root")
             break
 
+    # Deployment artifacts are the strongest application evidence: they exist so the
+    # repository can be run somewhere, not only imported. A lone Dockerfile scores less,
+    # because libraries carry one for their dev container or CI image.
+    deploy = [
+        n for n in (
+            "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
+            "Procfile", "fly.toml", "render.yaml",
+        )
+        if (root / n).is_file()
+    ]
+    if (root / "terraform").is_dir():
+        deploy.append("terraform/")
+    if deploy:
+        app += 2
+        why.append(
+            f"deployment artifacts at the root ({', '.join(deploy[:3])}) — "
+            "this is built to be run, not only imported"
+        )
+    elif (root / "Dockerfile").is_file():
+        app += 1
+        why.append("`Dockerfile` at the repository root")
+
     if tools:
         sample_like = sum(
             1 for t in tools
