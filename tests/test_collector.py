@@ -105,6 +105,9 @@ def main() -> int:
     check("report contains no numeric grade",
           not re.search(r"\b(?:risk|security|threat)\s+score\b|\b\d{1,3}\s*/\s*(?:10|100)\b", rpt, re.I))
     check("report carries coverage forward", "## Coverage" in rpt)
+    check("report has no placeholder leader in the system summary", "x because" not in rpt)
+    check("report states the detected shape in prose",
+          "Reads as an application" in rpt)
 
     print("target shape:")
     check("fixture reads as an application", inv["target"]["shape"] == "application")

@@ -83,9 +83,14 @@ def render_findings(fa: dict, inventory: dict | None = None) -> str:
         )
         ev = inventory.get("target", {}).get("shape_evidence") or []
         if ev:
+            shape = inventory.get("target", {}).get("shape", "unknown")
+            lead = {
+                "application": "Reads as an application",
+                "library": "Reads as a library",
+                "unknown": "Its shape is ambiguous",
+            }.get(shape, "Its shape is ambiguous")
             add("")
-            add(f"x because: "
-                + "; ".join(ev) + ".")
+            add(f"{lead} — {'; '.join(ev)}.")
         add("")
         add(
             "_This paragraph is assembled from detected facts. Replace it with a real description "
