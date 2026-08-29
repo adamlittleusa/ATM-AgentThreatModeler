@@ -8,7 +8,7 @@ Candidate findings from ATM v0.1.0. 21 checks run; 16 raised — **3 observed, 7
 
 Built on LangGraph, OpenAI API, LangChain. 5 declared tools (3 writes, 1 no io detected, 1 read only). It checkpoints, so runs survive a pause; has no tracing detected.
 
-x because: `worker.py` at the repository root; tool declarations sit in production paths.
+Reads as an application — `worker.py` at the repository root; tool declarations sit in production paths.
 
 _This paragraph is assembled from detected facts. Replace it with a real description of the system's job and blast radius before this goes in front of anyone._
 
